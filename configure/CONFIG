@@ -1,30 +1,57 @@
-# CONFIG
+# SPDX-FileCopyrightText: 1997 Argonne National Laboratory
+#
+# SPDX-License-Identifier: EPICS
 
-# You might want to change this to some shared set of rules, e.g.
-# RULES=/path/to/epics/support/modules/rules/x-y
-RULES=$(EPICS_BASE)
+# CONFIG - Load build configuration data
+#
+# Do not make changes to this file!
 
+# Allow user to override where the build rules come from
+RULES = $(EPICS_BASE)
+
+# RELEASE files point to other application tops
 include $(TOP)/configure/RELEASE
--include $(TOP)/configure/RELEASE.$(EPICS_HOST_ARCH)
 -include $(TOP)/configure/RELEASE.$(EPICS_HOST_ARCH).Common
+
 ifdef T_A
--include $(TOP)/configure/RELEASE.Common.$(T_A)
--include $(TOP)/configure/RELEASE.$(EPICS_HOST_ARCH).$(T_A)
+  -include $(TOP)/configure/RELEASE.Common.$(T_A)
+  -include $(TOP)/configure/RELEASE.$(EPICS_HOST_ARCH).$(T_A)
 endif
 
-CONFIG=$(RULES)/configure
+# Check EPICS_BASE is set properly
+ifneq (file,$(origin EPICS_BASE))
+  $(error EPICS_BASE must be set in a configure/RELEASE file)
+else
+  ifeq ($(wildcard $(EPICS_BASE)/configure/CONFIG_BASE),)
+    $(error EPICS_BASE does not point to an EPICS installation)
+  endif
+endif
+
+CONFIG = $(RULES)/configure
 include $(CONFIG)/CONFIG
 
-# Override for definition in base
+# Override the Base definition:
 INSTALL_LOCATION = $(TOP)
+
+# CONFIG_SITE files contain local build configuration settings
 include $(TOP)/configure/CONFIG_SITE
--include $(TOP)/configure/CONFIG_SITE.$(EPICS_HOST_ARCH)
+
+# Host-arch specific settings
 -include $(TOP)/configure/CONFIG_SITE.$(EPICS_HOST_ARCH).Common
 
 ifdef T_A
+  # Target-arch specific settings
  -include $(TOP)/configure/CONFIG_SITE.Common.$(T_A)
- -include $(TOP)/configure/CONFIG_SITE.$(EPICS_HOST_ARCH).$(T_A)
 
- -include $(TOP)/configure/O.$(T_A)/CONFIG_APP_INCLUDE
+  #  Host & target specific settings
+ -include $(TOP)/configure/CONFIG_SITE.$(EPICS_HOST_ARCH).$(T_A)
+endif
+
+# Load our cfg/CONFIG* files if installing elsewhere
+ifneq ($(INSTALL_LOCATION),$(TOP))
+  TOP_CFG_CONFIGS := $(wildcard $(INSTALL_CFG)/CONFIG*)
+  ifneq ($(TOP_CFG_CONFIGS),)
+    include $(TOP_CFG_CONFIGS)
+  endif
 endif
 
